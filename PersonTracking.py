@@ -5,6 +5,13 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import time
+import Queue
+
+#Define class to store image data
+class realsense_image(object):
+    def __init__(self, depth_image, color_image):
+        self.depth = depth_image
+        self.color = color_image
 
 
 #start __main__
@@ -29,7 +36,8 @@ print("Depth Scale is: " , depth_scale)
 align_to = rs.stream.color
 align = rs.align(align_to)
 
-prv_time = time.time()
+#Set up buffer queue at 2 queues
+q = Queue.Queue(2)
 
 #Start the thread to read frames from the video stream
 iscapture = True
@@ -40,8 +48,13 @@ realsense_capture_thread.start()
 #end __main__
 
 
-def ProcessDepthGrayscale():
-    
+def ProcessDepthGrayscale(iscapture):
+    try:
+        #Read image data from queue
+        data = q.get()
+        
+    finally:
+        pass
 
 
 def RealSenseCapture(iscapture):
@@ -63,6 +76,16 @@ def RealSenseCapture(iscapture):
 			# Convert images to numpy arrays
 			depth_image = np.asanyarray(depth_frame.get_data())
 			color_image = np.asanyarray(color_frame.get_data())
+            
+            if not q.full():
+                #Put image data to queue, when slot is empty
+                q.put(data)
+            else:
+                #Take previous data out
+                discard_data = q.get_nowait()
+                #Put new data into queue
+                q.put(data)
+
 	finally:
     	# Stop streaming
     	pipeline.stop()
